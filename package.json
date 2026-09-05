@@ -1,0 +1,14 @@
+{
+  "name": "blindcheck",
+  "version": "0.1.0",
+  "description": "Prove your monitoring can see. Mutation testing for gates, evals and guardrails: it breaks the thing your check grades and requires the check to notice. A gate that stays green on a deliberately broken subject is BLIND.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "bin": { "blindcheck": "bin/blindcheck.js" },
+  "files": ["src", "bin", "README.md"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node test/selftest.mjs" },
+  "keywords": ["mutation-testing","observability","monitoring","evals","guardrails","ai-agents","agent-monitoring","chaos-engineering","test-quality","blind-spot","llm-eval","assertion-quality"],
+  "license": "MIT"
+}
