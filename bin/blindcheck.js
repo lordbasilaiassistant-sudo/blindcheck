@@ -4,8 +4,16 @@
 //   blindcheck [path/to/blindcheck.config.mjs] [--verbose] [--json]
 //
 // Exit 0 only when every gate is SIGHTED. A blind gate is a defect, so CI should fail on it.
+//
+// ⚠ This file is written with a real editor, never through a shell heredoc. Version 0.1.0 shipped
+// with `abs.replace(/\/g, '/')` because a backslash was eaten in transit, and the package was
+// installable but the binary was a syntax error. The selftest imported the library directly and so
+// never executed its own entry point — a test suite blind to the thing it ships, in a package about
+// blind gates. test/selftest.mjs now spawns this CLI.
+
 import path from 'node:path';
 import fs from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { audit, report } from '../src/index.js';
 
 const args = process.argv.slice(2);
@@ -19,9 +27,14 @@ if (!fs.existsSync(abs)) {
   process.exit(2);
 }
 
-const mod = await import(`file://${abs.replace(/\/g, '/')}`);
+// pathToFileURL, not string surgery on separators — it is correct on Windows and it cannot be
+// broken by whatever writes this file.
+const mod = await import(pathToFileURL(abs).href);
 const gates = mod.default ?? mod.gates;
-if (!Array.isArray(gates)) { console.error(`blindcheck: ${file} must default-export an array of gates`); process.exit(2); }
+if (!Array.isArray(gates)) {
+  console.error(`blindcheck: ${file} must default-export an array of gates`);
+  process.exit(2);
+}
 
 const result = await audit(gates);
 console.log(asJson ? JSON.stringify(result, null, 2) : report(result, { verbose }));

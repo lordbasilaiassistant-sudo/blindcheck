@@ -103,7 +103,39 @@ console.log('\n6. THE SUBJECT-LEVEL MUTATIONS  (the commonest real failure)');
     : bad(`expected both SIGHTED, got ${JSON.stringify(careful.rows.map((x) => [x.mutation, x.verdict]))}`);
 }
 
-console.log('\n7. EVERY MUTATOR CARRIES A RECEIPT');
+console.log('\n7. THE CLI ACTUALLY RUNS  (regression: 0.1.0 shipped a syntax error in bin/)');
+{
+  // The suite imported the library and never executed the binary, so a broken entry point shipped
+  // to the registry and only a clean-room `npx blindcheck` found it. Spawn the real thing.
+  const { execFileSync } = await import('node:child_process');
+  const os = await import('node:os');
+  const fsp = await import('node:fs');
+  const pathm = await import('node:path');
+  const urlm = await import('node:url');
+
+  const here = pathm.dirname(urlm.fileURLToPath(import.meta.url));
+  const cli = pathm.join(here, '..', 'bin', 'blindcheck.js');
+  const tmp = fsp.mkdtempSync(pathm.join(os.tmpdir(), 'blindcheck-cli-'));
+  const cfg = pathm.join(tmp, 'blindcheck.config.mjs');
+  const srcUrl = urlm.pathToFileURL(pathm.join(here, '..', 'src', 'index.js')).href;
+  fsp.writeFileSync(cfg, [
+    `import { defineGate } from ${JSON.stringify(srcUrl)};`,
+    'const healthy = () => ({ rows: Array.from({length: 40}, (_, i) => ({ id: i })) });',
+    'export default [defineGate({ name: "non-empty-only", subject: healthy, gate: (s) => s.rows.length > 0 })];',
+  ].join('\n'));
+
+  try {
+    let out = '', code = 0;
+    try { out = execFileSync(process.execPath, [cli, cfg], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }); }
+    catch (e) { out = `${e.stdout || ''}${e.stderr || ''}`; code = e.status ?? 1; }
+
+    /SyntaxError|Cannot find module/.test(out) ? bad(`CLI failed to load: ${out.split('\n')[0]}`) : ok('CLI loads and runs');
+    /BLIND/.test(out) ? ok('CLI reports the blind gate') : bad(`CLI output did not flag the blind gate:\n${out.slice(0, 300)}`);
+    eq(code, 1, 'CLI exits non-zero when a gate is blind (so CI fails)');
+  } finally { fsp.rmSync(tmp, { recursive: true, force: true }); }
+}
+
+console.log('\n8. EVERY MUTATOR CARRIES A RECEIPT');
 {
   const missing = Object.entries(mutations).filter(([, m]) => !m.incident || m.incident.length < 40).map(([k]) => k);
   missing.length === 0 ? ok('every mutator cites a dated incident') : bad(`no incident on: ${missing.join(', ')}`);
