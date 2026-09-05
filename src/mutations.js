@@ -31,7 +31,10 @@ function map(node, fn, path = []) {
 }
 
 const MONEYISH = /(revenue|earn|paid|amount|price|balance|cost|usd|total|charge|payout)/i;
-const COUNTISH = /(count|total|length|size|n|num|denominator|expected|required)/i;
+// NB: no bare `n` alternative. It matched any key containing the letter n (durationSeconds,
+// version, ...), which made shortenDenominator apply almost everywhere and inflated its own
+// findings. Caught while auditing 115 of our own gates and refusing to publish the number. 
+const COUNTISH = /(count|total|length|size|rows|items|pages|records|entries|num|denominator|expected|required)/i;
 const TIMEISH = /(at|time|date|updated|modified|generated|last|stamp|seen)/i;
 // A date that is the ARTIFACT'S OWN generation time (freshness is the gate's business) versus a
 // date that is CONTENT inside the artifact (a document's own metadata — legitimately ancient).

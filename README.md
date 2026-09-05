@@ -113,17 +113,38 @@ What you should not do is leave a blind spot unexamined because the dashboard is
 
 ## What it found on us
 
-We ran it against our own production gates — the `verify()` functions that decide whether a
-marketplace actor is allowed to be published — with the healthy subject taken from a real run whose
-input matches the gate's own fixture.
+We pointed it at **115 of our own production gates** — the `verify()` functions that decide whether
+a marketplace actor may be published — with each healthy subject taken from a real run whose input
+matches that gate's own fixture. These are not fixtures we wrote for the demo; they are the
+artifacts real buyers received.
 
-It found our **top earner** blind to truncation. The gate asked `rowCount > 0` and
-`rows.length < 1`, so a spreadsheet returning one of five thousand rows passed cleanly. That is the
-same failure that had already shipped cut transcripts to paying customers — sitting undetected on a
-different product, months later, because the lesson was fixed in the code and never taught to the
-gate.
+```
+115 real production gates
+53 sighted · 57 blind · 5 false-alarm
 
-Fixed by asserting known counts instead of "more than zero": **3/7 BLIND → 7/7 SIGHTED**.
+   35  blind to shortenDenominator
+   19  blind to schemaValidLie
+   17  blind to truncate
+   17  blind to scaleDown
+   14  blind to stale
+    5  blind to duplicated
+    4  blind to zeroed
+```
+
+**Roughly half of our publish gates could not tell a healthy result from a broken one**, and these
+were written deliberately, by someone who cared, in a codebase that already had a rule saying every
+check needs a control. Seventeen are blind to truncation — the failure that had *already* shipped
+cut transcripts to paying customers. The lesson had been fixed in the code and never taught to the
+gates. One of the seventeen is the dev twin of the very actor the incident came from.
+
+Five more are `FALSE_ALARM`: they fail on healthy real data, so their reds mean nothing either.
+
+The tool then earned its keep on the top earner. That gate asked `rowCount > 0` and
+`rows.length < 1`, so a spreadsheet returning one of five thousand rows passed cleanly. Rewritten to
+assert known counts instead of "more than zero": **3/7 BLIND → 7/7 SIGHTED**.
+
+*Every number above was produced by the version in this repo, and two earlier versions of it were
+thrown away for over-reporting — see the honesty rules.*
 
 ## API
 
